@@ -1,13 +1,24 @@
 package frogermcs.io.flatbuffs;
 
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.widget.TextView;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.internal.LinkedTreeMap;
+import com.google.gson.reflect.TypeToken;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 
 import butterknife.Bind;
 import butterknife.ButterKnife;
@@ -25,6 +36,9 @@ public class MainActivity extends AppCompatActivity {
     TextView tvFlat;
     @Bind(R.id.tvJson)
     TextView tvJson;
+
+    @Bind(R.id.tvJsonNo)
+    TextView tvJsonNo;
 
     private RawDataReader rawDataReader;
 
@@ -58,6 +72,57 @@ public class MainActivity extends AppCompatActivity {
         }
         long endTime = System.currentTimeMillis() - startTime;
         tvJson.setText("Elements: " + reposListJson.repos.size() + ": load time: " + endTime + "ms");
+    }
+
+
+    //使用Json解析 没有bean
+    @OnClick(R.id.btnJsonNo)
+    public void onJsonWithoutBean(){
+        rawDataReader.loadJsonString(R.raw.repos_json).subscribe(new SimpleObserver<String>() {
+            @Override
+            public void onNext(String reposStr) {
+                parseWithoutBeanJson(reposStr);
+
+//                parseMapGson(reposStr);
+            }
+        });
+    }
+
+    // Map解析时
+    private void parseMapGson(String reposStr){
+        long startTime = System.currentTimeMillis();
+        GsonBuilder gb = new GsonBuilder();
+        Gson g = gb.create();
+        LinkedTreeMap<String, Object> map = g.fromJson(reposStr, new TypeToken<LinkedTreeMap<String, Object>>() {
+        }.getType());
+
+        ArrayList<HashMap<String,Object>> repos = (ArrayList<HashMap<String, Object>>) map.get("repos");
+        int length = repos.size();
+
+        for (int i = 0; i < length; i++) {
+//            Log.d("FlatBuffers", "Repo #" + i + ", id: " + repos.get(i).get("id"));
+        }
+
+        long endTime = System.currentTimeMillis() - startTime;
+        tvJsonNo.setText("Elements: " + repos.size() + ": load time: " + endTime + "ms");
+    }
+
+
+
+    private void parseWithoutBeanJson(String reposStr){
+        try{
+            long startTime = System.currentTimeMillis();
+            JSONArray repos = new JSONObject(reposStr).getJSONArray("repos");
+            int length = repos.length();
+            for (int i = 0; i < length; i++) {
+                JSONObject repo = (JSONObject) repos.get(i);
+                Log.d("FlatBuffers", "Repo #" + i + ", id: " + repo.getString("id"));
+            }
+            long endTime = System.currentTimeMillis() - startTime;
+            tvJsonNo.setText("Elements: " + reposListJson.repos.size() + ": load time: " + endTime + "ms");
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     @OnClick(R.id.btnFlatBuffers)
